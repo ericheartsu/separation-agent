@@ -3,6 +3,9 @@ import { db } from '@/lib/db';
 import { jobs, jobFiles, jobTags, tenants } from '@/lib/db/schema';
 import { z } from 'zod';
 import { requireSession } from '@/lib/auth-helpers';
+import { driveClient } from '@/lib/drive/client';
+import { assertWithinRoot } from '@/lib/drive/guard';
+import { recordAudit } from '@/lib/drive/audit';
 
 const FileSchema = z.object({
   id: z.string(),
@@ -31,8 +34,9 @@ const PayloadSchema = z.object({
 
 export async function POST(req: NextRequest) {
   let user;
+  let driveAccessToken: string | undefined;
   try {
-    ({ user } = await requireSession());
+    ({ user, driveAccessToken } = await requireSession());
   } catch {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
@@ -43,6 +47,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload', detail: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
+
+  // SAFETY LAYER 2 (re-applied at write time): refuse to save references
+  // to any Drive file outside the configured root folder. Even though the
+  // browser only surfaces files within the root, this defends against a
+  // hand-crafted POST that bypasses the UI.
+  if (driveAccessToken) {
+    const drive = driveClient(driveAccessToken);
+    try {
+      await Promise.all([
+        assertWithinRoot(data.files.CUSTOMER.id, drive),
+        assertWithinRoot(data.files.MOCKUP.id, drive),
+        assertWithinRoot(data.files.SEPARATION.id, drive),
+      ]);
+    } catch (err: any) {
+      await recordAudit({
+        userId: user.id,
+        driveFileId: 'multi',
+        driveFileName: `${data.files.CUSTOMER.name}|${data.files.MOCKUP.name}|${data.files.SEPARATION.name}`,
+        reason: 'job_save_validation',
+        successful: false,
+        errorMessage: err.message,
+      });
+      return NextResponse.json(
+        { error: `Drive validation failed: ${err.message}` },
+        { status: 400 },
+      );
+    }
+  }
 
   const [tenant] = await db.select().from(tenants).limit(1);
   if (!tenant) return NextResponse.json({ error: 'No tenant. Run seed.' }, { status: 500 });
