@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { tags } from '@/lib/db/schema';
 import { PageHeader, Breadcrumbs, Card } from '@/components/ui';
-import { NewJobForm } from './form';
+import { DriveJobBuilder } from './drive-builder';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,15 +12,20 @@ export default async function NewJobPage() {
     return acc;
   }, {} as Record<string, typeof allTags>);
 
+  const driveRootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || '';
+
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-5xl">
       <Breadcrumbs items={[{ href: '/jobs', label: 'Library' }, { label: 'Add Past Job' }]} />
       <PageHeader
         title="Add Past Job"
-        subtitle="Drop in the three files for one separation: customer, mockup, final separation."
+        subtitle="Browse Drive → pick a customer → pick a design → confirm the auto-detected triplet."
       />
       <Card>
-        <NewJobForm tagsByCategory={grouped} />
+        <DriveJobBuilder
+          tagsByCategory={grouped}
+          driveRootFolderId={driveRootFolderId}
+        />
       </Card>
     </div>
   );

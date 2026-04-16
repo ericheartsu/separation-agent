@@ -16,6 +16,9 @@ export async function assertWithinRoot(fileId: string, drive: drive_v3.Drive): P
     );
   }
 
+  // Root itself is always within itself
+  if (fileId === root) return;
+
   const ancestors = await collectAncestors(fileId, drive, new Set());
   if (!ancestors.has(root)) {
     throw new Error(

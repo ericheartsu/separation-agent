@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { jobs, jobFiles, jobTags, tenants, users } from '@/lib/db/schema';
+import { jobs, jobFiles, jobTags, tenants } from '@/lib/db/schema';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { requireSession } from '@/lib/auth-helpers';
 
 const FileSchema = z.object({
   id: z.string(),
@@ -30,6 +30,13 @@ const PayloadSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let user;
+  try {
+    ({ user } = await requireSession());
+  } catch {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
   const body = await req.json();
   const parsed = PayloadSchema.safeParse(body);
   if (!parsed.success) {
@@ -37,11 +44,8 @@ export async function POST(req: NextRequest) {
   }
   const data = parsed.data;
 
-  // assume single tenant + first admin user for now (NextAuth wires this up later)
   const [tenant] = await db.select().from(tenants).limit(1);
   if (!tenant) return NextResponse.json({ error: 'No tenant. Run seed.' }, { status: 500 });
-
-  const [admin] = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
 
   const [job] = await db.insert(jobs).values({
     tenantId: tenant.id,
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     printMethod: data.printMethod,
     difficulty: data.difficulty,
     notes: data.notes || null,
-    createdById: admin?.id,
+    createdById: user.id,
   }).returning();
 
   await db.insert(jobFiles).values(
