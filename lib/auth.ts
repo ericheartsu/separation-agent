@@ -36,6 +36,20 @@ async function refreshGoogleAccessToken(refreshToken: string) {
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true,
+  events: {
+    async signIn(msg) { console.log('[event:signIn]', { user: msg.user?.email, isNewUser: msg.isNewUser }); },
+    async signOut(msg) { console.log('[event:signOut]'); },
+    async createUser(msg) { console.log('[event:createUser]', msg.user?.email); },
+    async session(msg) { /* fires often, skip */ },
+  },
+  logger: {
+    error(code, ...message) {
+      console.error('[next-auth ERROR]', code, JSON.stringify(message).slice(0, 500));
+    },
+    warn(code) { console.warn('[next-auth WARN]', code); },
+    debug(code, metadata) { /* skip — too noisy */ },
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
