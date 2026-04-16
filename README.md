@@ -25,9 +25,32 @@ Over time, the agent learns how Craft separates art and becomes able to:
 
 ## Status
 
-🚧 **Scaffolding phase** — docs and folder skeleton only. No code yet.
+✅ **Phase 1 + 1.5 scaffold — runnable locally with mock data.**
 
-Branch: `scaffold/initial-plan`
+Branch: `phase-1-scaffold`. Every page renders, critique flow works (with stub responses), mockup generator produces real PNGs. Wire real Google/Anthropic creds to go live — see `SETUP.md`.
+
+## Quick start (local dev)
+
+```bash
+npm install
+npm run db:push        # create SQLite schema at ./local.db
+npm run db:seed        # 6 realistic past jobs, 23 tags, 2 templates
+npm run dev            # http://localhost:3000 (or :3001 if HQ Print is running)
+```
+
+No env vars needed for mock mode — the app auto-detects missing keys and stubs Drive / Anthropic / Google auth. An orange banner across the top reminds you.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Next.js dev server |
+| `npm run build` | Production build |
+| `npm run typecheck` | TypeScript strict check |
+| `npm run db:push` | Create/update SQLite schema |
+| `npm run db:seed` | Wipe + reseed mock data |
+| `npm run db:studio` | Drizzle Studio (visual DB browser) |
+| `npm run ban-drive-writes` | CI safety check — fails if Drive write APIs appear in code |
 
 ## Read these first
 
@@ -36,13 +59,14 @@ Branch: `scaffold/initial-plan`
 - [SAFETY.md](./SAFETY.md) — how Google Drive stays untouched
 - [SETUP.md](./SETUP.md) — what Eric needs to do before the app can run
 
-## Stack (planned)
+## Stack (in place)
 
-- Next.js 15 (App Router) + TypeScript + Tailwind
-- Vercel (hosting) + Vercel Postgres (or Neon)
-- NextAuth (Google login for team)
-- Google Drive API — **read-only scope, folder-scoped**
-- Anthropic SDK (Claude with vision) + prompt caching
+- Next.js 15 (App Router) + TypeScript + Tailwind — ✅ built
+- SQLite (local dev) → Postgres (production) via Drizzle ORM — ✅ schema + seeds
+- NextAuth (Google login for team) — ✅ scaffolded, not active in mock mode
+- Google Drive API — **read-only scope, folder-scoped** — ✅ wrapper + guard + audit
+- Anthropic SDK (Claude with vision) + prompt caching — ✅ wired, with mock fallback
+- Sharp (server-side image compositing for mockup generator) — ✅ working
 
 ## Sister projects
 

@@ -39,6 +39,14 @@ previews/
 *.tif
 *.tiff
 
+# local SQLite DB + drizzle generated migrations
+local.db
+local.db-journal
+local.db-wal
+local.db-shm
+drizzle/
+
 # secrets
 *-credentials.json
 service-account*.json
+tsconfig.tsbuildinfo

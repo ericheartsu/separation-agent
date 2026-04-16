@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0A0A0A;
+  --fg: #FAFAFA;
+  --panel: #141414;
+  --panel-2: #1C1C1C;
+  --border: #2A2A2A;
+  --muted: #6B7280;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+@layer components {
+  .panel {
+    @apply bg-[#141414] border border-[#2A2A2A] rounded-lg;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-craft-cyan text-black hover:bg-craft-cyan/90;
+  }
+  .btn-secondary {
+    @apply btn bg-[#1C1C1C] text-white border border-[#2A2A2A] hover:bg-[#242424];
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-500;
+  }
+  .input {
+    @apply w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm
+           focus:outline-none focus:border-craft-cyan;
+  }
+  .label {
+    @apply block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  .badge-cyan { @apply badge bg-craft-cyan/20 text-craft-cyan; }
+  .badge-orange { @apply badge bg-craft-orange/20 text-craft-orange; }
+  .badge-lime { @apply badge bg-craft-lime/20 text-craft-lime; }
+  .badge-grey { @apply badge bg-gray-700 text-gray-300; }
+}
