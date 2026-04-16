@@ -1,14 +1,14 @@
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, real, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 const id = () => text('id').primaryKey().$defaultFn(() => nanoid(16));
-const ts = (name: string) => integer(name, { mode: 'timestamp' });
+const ts = (name: string) => timestamp(name, { withTimezone: false });
 
 // ─────────────────────────────────────────────────────────────────
 // Tenants (future-proof; Craft is the only one for now)
 // ─────────────────────────────────────────────────────────────────
-export const tenants = sqliteTable('tenants', {
+export const tenants = pgTable('tenants', {
   id: id(),
   name: text('name').notNull(),
   driveRootFolderId: text('drive_root_folder_id'),
@@ -18,7 +18,7 @@ export const tenants = sqliteTable('tenants', {
 // ─────────────────────────────────────────────────────────────────
 // Users
 // ─────────────────────────────────────────────────────────────────
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
   id: id(),
   tenantId: text('tenant_id').notNull().references(() => tenants.id),
   email: text('email').notNull().unique(),
@@ -31,7 +31,7 @@ export const users = sqliteTable('users', {
 // ─────────────────────────────────────────────────────────────────
 // Jobs — one separation case study
 // ─────────────────────────────────────────────────────────────────
-export const jobs = sqliteTable('jobs', {
+export const jobs = pgTable('jobs', {
   id: id(),
   tenantId: text('tenant_id').notNull().references(() => tenants.id),
   customerName: text('customer_name').notNull(),
@@ -57,7 +57,7 @@ export const jobs = sqliteTable('jobs', {
 // ─────────────────────────────────────────────────────────────────
 // JobFile — three per job: customer / mockup / separation
 // ─────────────────────────────────────────────────────────────────
-export const jobFiles = sqliteTable('job_files', {
+export const jobFiles = pgTable('job_files', {
   id: id(),
   jobId: text('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   kind: text('kind', { enum: ['CUSTOMER', 'MOCKUP', 'SEPARATION'] }).notNull(),
@@ -75,7 +75,7 @@ export const jobFiles = sqliteTable('job_files', {
 // ─────────────────────────────────────────────────────────────────
 // Tags — taxonomy of separation challenges
 // ─────────────────────────────────────────────────────────────────
-export const tags = sqliteTable('tags', {
+export const tags = pgTable('tags', {
   id: id(),
   tenantId: text('tenant_id').notNull().references(() => tenants.id),
   name: text('name').notNull(),
@@ -85,7 +85,7 @@ export const tags = sqliteTable('tags', {
   description: text('description'),
 });
 
-export const jobTags = sqliteTable('job_tags', {
+export const jobTags = pgTable('job_tags', {
   jobId: text('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   tagId: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
 }, (t) => ({
@@ -96,14 +96,13 @@ export const jobTags = sqliteTable('job_tags', {
 // ─────────────────────────────────────────────────────────────────
 // Critique — agent's analysis of a job
 // ─────────────────────────────────────────────────────────────────
-export const critiques = sqliteTable('critiques', {
+export const critiques = pgTable('critiques', {
   id: id(),
   jobId: text('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   modelVersion: text('model_version').notNull(),
   promptVersion: text('prompt_version').notNull(),
   text: text('text').notNull(),
-  // structured findings as JSON
-  findings: text('findings', { mode: 'json' }).$type<{
+  findings: jsonb('findings').$type<{
     summary: string;
     color_palette: { name: string; hex?: string; role: string }[];
     underbase_strategy?: string;
@@ -119,7 +118,7 @@ export const critiques = sqliteTable('critiques', {
 // ─────────────────────────────────────────────────────────────────
 // Correction — trainer feedback on a critique
 // ─────────────────────────────────────────────────────────────────
-export const corrections = sqliteTable('corrections', {
+export const corrections = pgTable('corrections', {
   id: id(),
   critiqueId: text('critique_id').notNull().references(() => critiques.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id),
@@ -132,11 +131,10 @@ export const corrections = sqliteTable('corrections', {
 // ─────────────────────────────────────────────────────────────────
 // Pin annotations — drop pins on artwork to mark problem areas
 // ─────────────────────────────────────────────────────────────────
-export const pins = sqliteTable('pins', {
+export const pins = pgTable('pins', {
   id: id(),
   jobFileId: text('job_file_id').notNull().references(() => jobFiles.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id),
-  // normalized 0-1 coordinates so they survive image resizing
   x: real('x').notNull(),
   y: real('y').notNull(),
   note: text('note').notNull(),
@@ -146,24 +144,23 @@ export const pins = sqliteTable('pins', {
 // ─────────────────────────────────────────────────────────────────
 // Embeddings — for similarity search (Phase 2)
 // ─────────────────────────────────────────────────────────────────
-export const jobEmbeddings = sqliteTable('job_embeddings', {
+export const jobEmbeddings = pgTable('job_embeddings', {
   id: id(),
   jobId: text('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  // stored as JSON array; in production consider pgvector
-  vector: text('vector', { mode: 'json' }).$type<number[]>().notNull(),
+  vector: jsonb('vector').$type<number[]>().notNull(),
   createdAt: ts('created_at').notNull().$defaultFn(() => new Date()),
 });
 
 // ─────────────────────────────────────────────────────────────────
 // Drive audit log — every read is recorded
 // ─────────────────────────────────────────────────────────────────
-export const driveAudit = sqliteTable('drive_audit', {
+export const driveAudit = pgTable('drive_audit', {
   id: id(),
   userId: text('user_id').references(() => users.id),
   driveFileId: text('drive_file_id').notNull(),
   driveFileName: text('drive_file_name'),
   reason: text('reason').notNull(),
-  successful: integer('successful', { mode: 'boolean' }).notNull(),
+  successful: boolean('successful').notNull(),
   errorMessage: text('error_message'),
   createdAt: ts('created_at').notNull().$defaultFn(() => new Date()),
 }, (t) => ({
@@ -174,7 +171,7 @@ export const driveAudit = sqliteTable('drive_audit', {
 // ─────────────────────────────────────────────────────────────────
 // Phase 1.5 — Mockup Generator
 // ─────────────────────────────────────────────────────────────────
-export const garmentTemplates = sqliteTable('garment_templates', {
+export const garmentTemplates = pgTable('garment_templates', {
   id: id(),
   tenantId: text('tenant_id').notNull().references(() => tenants.id),
   garmentStyleSku: text('garment_style_sku').notNull(),
@@ -186,29 +183,26 @@ export const garmentTemplates = sqliteTable('garment_templates', {
   createdAt: ts('created_at').notNull().$defaultFn(() => new Date()),
 });
 
-export const printZones = sqliteTable('print_zones', {
+export const printZones = pgTable('print_zones', {
   id: id(),
   templateId: text('template_id').notNull().references(() => garmentTemplates.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(), // 'chest', 'full-front', 'sleeve-left', etc.
-  // pixel coordinates within the template image
+  name: text('name').notNull(),
   x: integer('x').notNull(),
   y: integer('y').notNull(),
   width: integer('width').notNull(),
   height: integer('height').notNull(),
   rotationDeg: real('rotation_deg').notNull().default(0),
-  // physical print constraints
   maxPrintWidthIn: real('max_print_width_in').notNull(),
   maxPrintHeightIn: real('max_print_height_in').notNull(),
   pixelsPerInch: integer('pixels_per_inch').notNull().default(150),
 });
 
-export const generatedMockups = sqliteTable('generated_mockups', {
+export const generatedMockups = pgTable('generated_mockups', {
   id: id(),
   tenantId: text('tenant_id').notNull().references(() => tenants.id),
   hqJobId: text('hq_job_id'),
   templateId: text('template_id').notNull().references(() => garmentTemplates.id),
-  // which art went in which zone
-  zonesJson: text('zones_json', { mode: 'json' }).$type<{
+  zonesJson: jsonb('zones_json').$type<{
     zoneId: string;
     artUrl: string;
     inkColors: string[];

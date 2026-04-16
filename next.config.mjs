@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['better-sqlite3', 'sharp'],
+  serverExternalPackages: ['postgres', 'sharp'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'drive.google.com' },
