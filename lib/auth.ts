@@ -25,17 +25,35 @@ export const authOptions: NextAuthOptions = {
             // Drive scope: read-only ONLY (see SAFETY.md)
             'https://www.googleapis.com/auth/drive.readonly',
           ].join(' '),
-          // Restrict to the company workspace
-          hd: ALLOWED_DOMAIN,
+          // Note: removed `hd` param — NextAuth's signIn callback enforces
+          // domain check below, and `hd` can over-filter when the user's
+          // Google account isn't part of a Workspace org with the same name.
+          access_type: 'offline',
+          prompt: 'consent',
         },
       },
     }),
   ],
   session: { strategy: 'jwt' },
   callbacks: {
-    async signIn({ profile }) {
-      // Domain restriction (belt + suspenders to the `hd` param)
-      if (!profile?.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return false;
+    async signIn({ user, profile, account }) {
+      // Try multiple sources for the email, log everything
+      const email = profile?.email ?? user?.email ?? null;
+      console.log('[signIn callback]', {
+        email,
+        profileEmail: profile?.email,
+        userEmail: user?.email,
+        allowedDomain: ALLOWED_DOMAIN,
+        provider: account?.provider,
+      });
+      if (!email) {
+        console.log('[signIn callback] REJECTED — no email');
+        return false;
+      }
+      if (!email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN.toLowerCase()}`)) {
+        console.log('[signIn callback] REJECTED — domain mismatch');
+        return false;
+      }
       return true;
     },
     async jwt({ token, account }) {
