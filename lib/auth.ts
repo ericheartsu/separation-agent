@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 const ALLOWED_DOMAIN = process.env.ALLOWED_GOOGLE_DOMAIN || 'craft-mfg.com';
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
