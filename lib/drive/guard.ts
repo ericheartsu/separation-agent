@@ -36,7 +36,7 @@ async function collectAncestors(
   if (seen.has(fileId)) return seen;
   seen.add(fileId);
 
-  const res = await drive.files.get({ fileId, fields: 'parents' });
+  const res = await drive.files.get({ fileId, fields: 'parents', supportsAllDrives: true });
   const parents = res.data.parents ?? [];
   for (const p of parents) {
     await collectAncestors(p, drive, seen);

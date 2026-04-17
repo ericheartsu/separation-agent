@@ -44,6 +44,12 @@ export async function listFolderChildren(
       fields: 'files(id,name,mimeType,size,modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
+      // These two are required to surface items in Shared Drives (formerly
+      // Team Drives) AND items shared with the user from someone else's My Drive.
+      // Without them, the API defaults to "My Drive only" and returns empty
+      // for anything Valerie shared with Eric.
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
     const items = res.data.files ?? [];
     const folders = items
@@ -92,9 +98,9 @@ export async function fetchDriveFile(
   await assertWithinRoot(fileId, drive);
 
   try {
-    const meta = await drive.files.get({ fileId, fields: 'id,name,mimeType' });
+    const meta = await drive.files.get({ fileId, fields: 'id,name,mimeType', supportsAllDrives: true });
     const data = await drive.files.get(
-      { fileId, alt: 'media' },
+      { fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'arraybuffer' },
     );
     await recordAudit({
